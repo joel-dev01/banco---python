@@ -31,4 +31,11 @@ python main.py
 
 
 
-Proyecto realizado como práctica de aprendizaj
+
+
+
+
+
+
+
+Proyecto realizado como práctica de aprendizaje
