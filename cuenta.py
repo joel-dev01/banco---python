@@ -1,3 +1,4 @@
+from db import actualizar_saldo_db, insertar_movimiento
 from datetime import datetime
 import uuid
 
@@ -21,7 +22,10 @@ class Cuenta:
     def depositar(self, monto):
         if monto <= 0:
             return False
-        self._saldo += monto
+        nuevo_saldo = self._saldo + monto
+        actualizar_saldo_db(self.id, nuevo_saldo)
+        self._saldo = nuevo_saldo
+        
         self._registrar_movimiento("deposito", monto)
         return True
 
@@ -39,9 +43,11 @@ class Cuenta:
         if total <= 0 or total > self._saldo:
             return False
 
-        self._saldo -= total
+        nuevo_saldo = self._saldo - total
+        actualizar_saldo_db(self.id, nuevo_saldo)
+        self._actualizar_memoria(nuevo_saldo) 
+
         self._registrar_movimiento("retiro", total)
-        
         return True
 
     def transferir(self, otra_cuenta, monto):
@@ -57,19 +63,17 @@ class Cuenta:
             return True
         return False
 
-    def actualizar_saldo(self, nuevo_saldo):
+    
+    def _actualizar_memoria(self, nuevo_saldo):
+        
         if nuevo_saldo < 0:
             return False
-        saldo_anterior = self._saldo
+
         self._saldo = nuevo_saldo
-        self._historial.append({
-            "tipo": "ajuste",
-            "antes": saldo_anterior,
-            "despues": nuevo_saldo,
-            "fecha": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-            "saldo": self._saldo })
         
         return True
+        
+        
 
     def ver_historial(self):
         return self._historial
@@ -78,11 +82,16 @@ class Cuenta:
         return f"Titular: {self.titular} - Saldo: {self._saldo}"
     
     def _registrar_movimiento(self, tipo, monto):
+        fecha = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+
         movimiento = {
             "tipo": tipo,
             "monto": monto,
-            "fecha": datetime.now().strftime("%Y-%m-%d %H:%M:%S"
-            ),
-            "saldo": self._saldo 
-        }
+            "fecha": fecha,
+            "saldo": self._saldo
+    }
+
         self._historial.append(movimiento)
+
+    # 🔥 guardar en SQL
+        insertar_movimiento(self.id, tipo, monto, fecha)

@@ -1,41 +1,44 @@
-🏦 Sistema Bancario en Python
+# API Banco - Flask
 
-Proyecto de consola desarrollado en Python utilizando Programación Orientada a Objetos.
+API REST desarrollada con Flask y SQLite para gestionar cuentas bancarias.
 
-🚀 Funcionalidades
+## Funcionalidades
 
 - Crear cuentas
-- Depositar dinero
-- Retirar dinero
+- Listar cuentas
+- Obtener cuenta por ID
+- Actualizar saldo
+- Eliminar cuentas
 - Transferencias entre cuentas
 - Historial de movimientos
-- Filtros por tipo de operación
-- Persistencia de datos con JSON
+- Filtros de movimientos
 
-🧠 Tecnologías
+## Tecnologías
 
 - Python
-- Programación Orientada a Objetos
-- JSON
+- Flask
+- SQLite
+- Postman
 
-📂 Estructura
+## Endpoints
 
-- "banco.py" → lógica del sistema
-- "cuenta.py" → modelo de cuenta
-- "politicas.py" → reglas (comisiones, límites)
-- "main.py" → interfaz de consola
+### Crear cuenta
+POST /cuentas
 
-▶️ Cómo ejecutar
+### Listar cuentas
+GET /cuentas
 
-python main.py
+### Obtener cuenta
+GET /cuentas/<id>
 
+### Actualizar saldo
+PUT /cuentas/<id>
 
+### Eliminar cuenta
+DELETE /cuentas/<id>
 
+### Transferencias
+POST /transferencias
 
-
-
-
-
-
-
-Proyecto realizado como práctica de aprendizaje
+### Movimientos
+GET /cuentas/<id>/movimientos

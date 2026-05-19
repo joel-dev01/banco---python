@@ -1,10 +1,17 @@
+from db import ( obtener_movimientos, 
+                crear_tabla_movimientos, 
+                crear_db,
+                actualizar_saldo_db,
+                buscar_movimientos ) 
 from banco import Banco
 from cuenta import Cuenta
 from politicas import *
 
 def menu():
+    crear_tabla_movimientos()
+    crear_db()
     banco = Banco()
-    banco.cargar()
+    
 
     while True:
         print("\n--- MENU ---")
@@ -36,7 +43,7 @@ def menu():
             )
 
             banco.agregar_cuenta(cuenta)
-            banco.guardar()
+            
         
         elif opcion == "2":
             print("Cuenta origen:")
@@ -54,22 +61,27 @@ def menu():
                 print("Monto invalido")
                 continue
             if banco.transferir(c1.id, c2.id, monto):
+                
+
                 print("Transferencia realizada")
-                banco.guardar()
             else:
-                print("Error en la transferencia")    
+                
+                print("Error en la transferencia")
         elif opcion == "3":
             cuenta = banco.seleccionar_cuenta()
-            if cuenta:
-                
-                historial = cuenta.ver_historial()
-
-                if not historial:
+            if  not cuenta:
+                continue
+            movimientos = obtener_movimientos(cuenta.id)
+            
+            
+            if not movimientos:
                     print("No hay movimientos")
+                    continue
         
-                else:
-                    for mov in historial:
-                        print(f"{mov['fecha']} | {mov['tipo']} | ${mov['monto']} | saldo: ${mov['saldo']}")
+        
+            for tipo, monto, fecha in movimientos:
+                
+                print(f"{fecha} | {tipo} | ${monto}")
                         
                    
 
@@ -78,9 +90,19 @@ def menu():
 
         elif opcion == "5":
             cuenta = banco.seleccionar_cuenta()
-            if cuenta:
-                banco.eliminar_cuenta(cuenta.id)
-                banco.guardar()
+            if not cuenta:
+                continue
+           
+            confirmar = input("¿Seguro? (s/n): ")
+                
+            if confirmar.lower() != "s":
+                print("Operacion cancelada")
+                continue
+            if banco.eliminar_cuenta(cuenta.id):
+                print("Cuenta eliminada")
+            else:
+                print("Error al eliminar")
+            
 
         elif opcion == "6":
             
@@ -93,9 +115,11 @@ def menu():
                     print("Saldo inválido")
                     continue
 
-                if cuenta.actualizar_saldo(nuevo_saldo):
-                    print("Saldo actualizado")
-                    banco.guardar()
+                if cuenta._actualizar_memoria(nuevo_saldo):
+                    
+                    actualizar_saldo_db(cuenta.id, nuevo_saldo)
+                    print("Saldo actualizado en memoria y SQL")
+                    
                 else:
                     print("No se pudo actualizar")
             else:
@@ -110,43 +134,70 @@ def menu():
                 print("Monto invalido")
                 continue
             if cuenta.depositar(monto):
-                print("Deposito realizado")
-                banco.guardar()
+                print("Depósito realizado")
+                
+
             else:
-                print("No se pudo realizar el deposito") 
+                print("No se pudo realizar el depósito")
+            
         
+        
+
         elif opcion == "8":
             cuenta = banco.seleccionar_cuenta()
             if not cuenta:
                 continue
-            historial = cuenta.ver_historial() 
-            solo_depositos = [mov for mov in historial if mov["tipo"] == "deposito"]
-            solo_retiros = [mov for mov in historial if mov["tipo"] == "retiro"]
-            transferencias = [mov for mov in historial if mov["tipo"] in ["transferencia_enviada", "transferencia_recivida"]]
-             
-            print("1. - Depositos")
-            print("2. - Retiros")
-            print("3. - Tranferencias")
-            
-            filtro = input("Elegi una opcion: ")
+
+            print("1. Depositos")
+            print("2. Retiros")
+            print("3. Transferencias")
+            print("4. Todos")
+
+            filtro = input("Elegí tipo: ")
+
+            tipo = None
+
             if filtro == "1":
-                
-                lista = solo_depositos
+                tipo = "deposito"
             elif filtro == "2":
-                lista = solo_retiros
+                tipo = "retiro"
             elif filtro == "3":
-                lista = transferencias
-            
+                tipo = "transferencia_enviada"
+            elif filtro == "4":
+                tipo = None
             else:
-                print("Opcion invalida")
+                print("Opción inválida")
                 continue
-            for mov in lista:
-                if not lista:
-                    print("No hay movimientos de este tipo")
-                    continue
-                print(f"{mov['fecha']} | {mov['tipo']} | ${mov['monto']} | Saldo: ${mov['saldo']}")
+
+            fecha_desde = input("Desde (YYYY-MM-DD) o Enter: ") or None
+            fecha_hasta = input("Hasta (YYYY-MM-DD) o Enter: ") or None
+
+            try:
+                monto_min = input("Monto mínimo o Enter: ")
+                monto_min = float(monto_min) if monto_min else None
+
+                monto_max = input("Monto máximo o Enter: ")
+                monto_max = float(monto_max) if monto_max else None
+            except ValueError:
+                print("Monto inválido")
+                continue
+
+            movimientos = buscar_movimientos(
+            cuenta.id,
+            tipo,
+            fecha_desde,
+            fecha_hasta,
+            monto_min,
+            monto_max )
+
+            if not movimientos:
+                print("No hay resultados")
+                continue
+
+            for tipo, monto, fecha in movimientos:
+                print(f"{fecha} | {tipo} | ${monto}")
              
-            
+         
         
         elif opcion == "0":
             break
