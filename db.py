@@ -12,18 +12,56 @@ def get_connection():
 def crear_db():
     conexion = get_connection()
     cursor = conexion.cursor()
+    
+
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS usuarios (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        email TEXT NOT NULL UNIQUE,
+        password_hash TEXT NOT NULL,
+        fecha_creacion TEXT DEFAULT CURRENT_TIMESTAMP
+    )
+    """)
 
     cursor.execute("""
     CREATE TABLE IF NOT EXISTS cuentas (
         id TEXT PRIMARY KEY,
         titular TEXT,
-        saldo REAL
-    )
-    """)
+        saldo REAL,
+        usuario_id INTEGER NOT NULL,
+        FOREIGN KEY (usuario_id) REFERENCES usuarios(id) ON DELETE CASCADE
 
+    )""")
     conexion.commit()
     conexion.close()
 
+def insertar_usuario(email, password_hash):
+    conexion = get_connection()
+    cursor = conexion.cursor()
+
+    cursor.execute("""
+    INSERT INTO usuarios (email, password_hash)
+    VALUES (?, ?)
+    """, (email, password_hash))
+
+    conexion.commit()
+    usuario_id = cursor.lastrowid
+    conexion.close()
+    return usuario_id
+
+def obtener_usuario_por_email(email):
+    conexion = get_connection()
+    cursor = conexion.cursor()
+
+    cursor.execute("""
+    SELECT id, email, password_hash
+    FROM usuarios
+    WHERE email = ?
+    """, (email,))
+
+    fila = cursor.fetchone()
+    conexion.close()
+    return fila
 
 def crear_tabla_movimientos():
     
@@ -46,45 +84,52 @@ def crear_tabla_movimientos():
     conexion.close()
 
     
-def insertar_cuenta(cuenta):
+def insertar_cuenta(cuenta,user_id):
     
     conexion = get_connection()
     cursor = conexion.cursor()
 
     cursor.execute("""
-    INSERT INTO cuentas (id, titular, saldo)
-    VALUES (?, ?, ?)
-    """, (cuenta.id, cuenta.titular, cuenta.saldo))
+    INSERT INTO cuentas (id, titular, saldo, usuario_id)
+    VALUES (?, ?, ?, ?)
+    """, (cuenta.id, cuenta.titular, cuenta.saldo, user_id))
 
     conexion.commit()
     conexion.close()
       
     
-def obtener_cuentas():
-    
+def obtener_cuentas(usuario_id):
     conexion = get_connection()
     cursor = conexion.cursor()
 
-    cursor.execute("SELECT id, titular, saldo FROM cuentas")
+    cursor.execute(
+        "SELECT id, titular, saldo FROM cuentas WHERE usuario_id = ?",
+        (usuario_id,)
+    )
     filas = cursor.fetchall()
-
+    
     conexion.close()
     return filas
 
-
-def obtener_cuenta_por_id(cuenta_id):
     
+
+
+def obtener_cuenta_por_id(cuenta_id, usuario_id):
     conexion = get_connection()
     cursor = conexion.cursor()
 
-    cursor.execute("SELECT id, titular, saldo FROM cuentas WHERE id = ?", (cuenta_id,))
-    fila = cursor.fetchone()
+    cursor.execute("""
+        SELECT id, titular, saldo
+        FROM cuentas
+        WHERE id = ? AND usuario_id = ?
+    """, (cuenta_id, usuario_id))
 
+    fila = cursor.fetchone()
     conexion.close()
     return fila
 
 
-def actualizar_saldo_db(cuenta_id, nuevo_saldo):
+def actualizar_saldo_db(cuenta_id, nuevo_saldo, usuario_id):
     conexion = get_connection()
     cursor = conexion.cursor()
 
@@ -92,34 +137,31 @@ def actualizar_saldo_db(cuenta_id, nuevo_saldo):
         """
         UPDATE cuentas 
         SET saldo = ?
-        WHERE id = ?
+        WHERE id = ? AND usuario_id = ?
         """,
-        (nuevo_saldo, cuenta_id) )
+        (nuevo_saldo, cuenta_id, usuario_id) )
     conexion.commit()
     filas_afectadas = cursor.rowcount
     conexion.close()
     return filas_afectadas
 
 
-def eliminar_cuenta_db(cuenta_id):
+def eliminar_cuenta_db(cuenta_id, usuario_id):
     conexion = get_connection()
     cursor = conexion.cursor()
 
     try:
-        
-        cursor.execute("DELETE FROM cuentas WHERE id = ?", (cuenta_id,))
+        cursor.execute("DELETE FROM cuentas WHERE id = ? AND usuario_id = ?", (cuenta_id, usuario_id))
 
         if cursor.rowcount == 0:
-            
             conexion.rollback()
             return False
 
         conexion.commit()
         return True
 
-    except Exception as e:
+    except Exception:
         conexion.rollback()
-        
         return False
 
     finally:
@@ -222,7 +264,7 @@ def buscar_movimientos(
     return filas
 
 
-def transferir(origen_id, destino_id, monto):
+def transferir(origen_id, destino_id, monto, usuario_id):
     conexion = get_connection()
     cursor = conexion.cursor()
     fecha = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
@@ -230,22 +272,22 @@ def transferir(origen_id, destino_id, monto):
     try:
         if origen_id == destino_id:
             return False, "No podes transferirte a vos mismo"
-        # Obtener saldo origen
-        cursor.execute("SELECT saldo FROM cuentas WHERE id = ?", (origen_id,))
+
+        # Obtener saldo origen y verificar propiedad
+        cursor.execute("SELECT saldo FROM cuentas WHERE id = ? AND usuario_id = ?", (origen_id, usuario_id))
         fila_origen = cursor.fetchone()
 
         if not fila_origen:
-            return False, "Cuenta origen no existe"
+            return False, "Cuenta origen no existe o no pertenece al usuario"
 
         saldo_origen = fila_origen[0]
         if monto <= 0:
             return False, "Monto invalido"
-        
 
         if saldo_origen < monto:
             return False, "Saldo insuficiente"
 
-        # Verificar destino
+        # Verificar destino (no es necesario que pertenezca al mismo usuario)
         cursor.execute("SELECT saldo FROM cuentas WHERE id = ?", (destino_id,))
         fila_destino = cursor.fetchone()
 
@@ -280,8 +322,7 @@ def transferir(origen_id, destino_id, monto):
 
     except Exception:
         conexion.rollback()
-        return False, " Error interno"
-    
+        return False, "Error interno"
 
     finally:
         conexion.close()

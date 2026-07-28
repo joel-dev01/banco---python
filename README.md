@@ -1,44 +1,94 @@
-# API Banco - Flask
+# 🏦 API Banco – Flask
 
-API REST desarrollada con Flask y SQLite para gestionar cuentas bancarias.
+API REST desarrollada con **Flask y SQLite** que simula un sistema bancario con autenticación JWT, gestión de cuentas y transferencias seguras mediante transacciones atómicas.
 
-## Funcionalidades
+---
 
-- Crear cuentas
-- Listar cuentas
-- Obtener cuenta por ID
-- Actualizar saldo
-- Eliminar cuentas
-- Transferencias entre cuentas
-- Historial de movimientos
-- Filtros de movimientos
+## 🚀 Características
 
-## Tecnologías
+- ✅ Registro y login con **JWT**
+- ✅ Autenticación protegida con middleware (`token_required`)
+- ✅ Gestión de cuentas por usuario autenticado
+- ✅ Transferencias con **transacciones SQL (commit / rollback)**
+- ✅ Registro automático de movimientos
+- ✅ Historial de movimientos por cuenta
+- ✅ Validaciones robustas de negocio
+- ✅ Relaciones con claves foráneas y `ON DELETE CASCADE`
+- ✅ Aislamiento de datos por usuario
 
-- Python
+---
+
+## 🧠 Conceptos Implementados
+
+- RESTful API design
+- JWT Authentication
+- Password hashing con bcrypt
+- Transacciones atómicas (ACID)
+- Foreign Keys en SQLite
+- Manejo de errores HTTP
+- Validaciones backend
+- Separación de capas (API / DB)
+
+---
+
+## 🛠 Tecnologías
+
+- Python 3
 - Flask
 - SQLite
-- Postman
+- PyJWT
+- Bcrypt
+- Postman (testing)
 
-## Endpoints
+---
 
-### Crear cuenta
-POST /cuentas
+## 📦 Endpoints Principales
 
-### Listar cuentas
-GET /cuentas
+### 🔐 Autenticación
+- `POST /register`
+- `POST /login`
 
-### Obtener cuenta
-GET /cuentas/<id>
+### 🏦 Cuentas
+- `POST /cuentas`
+- `GET /cuentas`
+- `GET /cuentas/<id>`
+- `PUT /cuentas/<id>`
+- `DELETE /cuentas/<id>`
 
-### Actualizar saldo
-PUT /cuentas/<id>
+### 💸 Transferencias
+- `POST /transferencias`
 
-### Eliminar cuenta
-DELETE /cuentas/<id>
+### 📜 Movimientos
+- `GET /cuentas/<id>/movimientos`
 
-### Transferencias
-POST /transferencias
+---
 
-### Movimientos
-GET /cuentas/<id>/movimientos
+## ▶️ Ejecutar Localmente
+
+```bash
+python -m venv venv
+venv\Scripts\activate   # Windows
+pip install -r requirements.txt
+python api.py
+```
+
+La API inicia en:
+
+```
+http://127.0.0.1:5000
+```
+
+---
+
+## 🔒 Seguridad
+
+- Contraseñas almacenadas con hash seguro (bcrypt)
+- Autenticación basada en JWT con expiración
+- Aislamiento de cuentas por usuario autenticado
+- Foreign keys activadas en SQLite
+
+---
+
+## 📌 Nota
+
+Proyecto desarrollado con fines educativos para demostrar conocimientos en backend y arquitectura REST.
